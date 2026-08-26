@@ -3,10 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Le Grand Quiz des Premiers Secours - PSE 1 & PSE 2</title>
-
-	<!-- ⬇️ C'est ICI qu'il faut ajouter la ligne du manifeste ! ⬇️ -->
-    <link rel="manifest" href="manifest.json">
+    <title>Le Grand Quiz des Premiers Secours - PSE & Sapeurs-Pompiers</title>
     <style>
         * {
             box-sizing: border-box;
@@ -379,7 +376,7 @@
     <header>
         <div class="header-title">
             <span class="logo-badge">SDIS 36</span>
-            <h1 style="font-size: 1.1rem; font-weight: bold;">SDIS de l'Indre - Grand Jeu PSE 1 & PSE 2</h1>
+            <h1 style="font-size: 1.1rem; font-weight: bold;">SDIS de l'Indre - Grand Quiz Secours</h1>
         </div>
         <div class="header-actions">
             <button id="home-btn-header" onclick="restartGame()" class="btn-home-header hidden">🏠 Accueil</button>
@@ -396,12 +393,24 @@
         <div id="welcome-screen" class="card">
             <div style="font-size: 3rem; margin-bottom: 1rem;">🚒</div>
             <h2>SDIS de l'Indre</h2>
-            <p>Testez vos connaissances en secourisme selon le référentiel officiel national PSE 1 & PSE 2.</p>
+            <p>Choisissez votre spécialité et votre mode de jeu :</p>
+
+            <!-- 1. Choix de la Spécialité / Matière -->
+            <div class="settings-group" style="margin-bottom: 1.5rem;">
+                <div class="setting-item">
+                    <span class="setting-label" style="font-weight: bold; color: #f87171;">Matière :</span>
+                    <select id="setting-specialty" style="padding: 0.5rem; font-weight: bold;">
+                        <option value="pse">🛡️ Secourisme (PSE 1 & PSE 2)</option>
+                        <option value="chef-agres">🚒 Chef d'Agrès VSAV</option>
+                        <option value="isp">💉 Infirmier Sapeur-Pompier (ISP)</option>
+                    </select>
+                </div>
+            </div>
 
             <!-- Paramètres intégrés -->
             <div id="settings-panel" class="settings-group hidden">
                 <div class="setting-item">
-                    <span class="setting-label">Niveau cible :</span>
+                    <span class="setting-label">Niveau cible (PSE) :</span>
                     <select id="setting-level">
                         <option value="all">PSE 1 & PSE 2 (Tous)</option>
                         <option value="PSE1">PSE 1 uniquement</option>
@@ -414,16 +423,13 @@
                 </div>
             </div>
             
+            <!-- 2. Choix du Mode de Jeu (Classique ou Mort Subite) -->
             <div class="modes-grid">
-                <div class="mode-card" onclick="selectMode('classic')">
+                <div class="mode-card" onclick="startQuizWithSpecialty('classic')">
                     <div class="mode-title"><span>🎯 Mode Classique</span> <span>10 Q</span></div>
                     <p class="mode-desc">Un parcours équilibré de 10 questions aléatoires avec explications détaillées.</p>
                 </div>
-                <div class="mode-card" onclick="selectMode('chrono')">
-                    <div class="mode-title"><span>⏱️ Contre la montre</span> <span>60 sec</span></div>
-                    <p class="mode-desc">Enchaînez un maximum de bonnes réponses en 60 secondes chrono !</p>
-                </div>
-                <div class="mode-card" onclick="selectMode('sudden-death')">
+                <div class="mode-card" onclick="startQuizWithSpecialty('sudden-death')">
                     <div class="mode-title"><span>💀 Mort Subite</span> <span>1 erreur max</span></div>
                     <p class="mode-desc">Le jeu s'arrête dès la première mauvaise réponse. Classement Top 10 !</p>
                 </div>
@@ -498,20 +504,22 @@
 
             <div class="button-group">
                 <button onclick="restartGame()" class="btn">Changer de mode</button>
-                <button onclick="selectMode(currentGameMode)" class="btn btn-secondary">Rejouer</button>
+                <button onclick="startQuizWithSpecialty(currentGameMode)" class="btn btn-secondary">Rejouer</button>
             </div>
         </div>
     </main>
 
     <!-- Footer -->
     <footer>
-        SDIS de l'Indre - Basé sur les recommandations nationales des premiers secours (PSE 1 / PSE 2) - DGSCGC.
+        SDIS de l'Indre - Basé sur les recommandations nationales (PSE 1 / PSE 2 / Chef d'Agrès / ISP) - DGSCGC.
     </footer>
 
     <!-- Script Application Logic -->
-	<!-- 1. D'abord on charge le fichier contenant les questions -->
+    <!-- 1. Fichiers de questions -->
     <script src="questions.js"></script>
-    <!-- 2. Ensuite on charge le moteur du quiz -->
+    <script src="questions-chef-agres.js"></script>
+    <script src="questions-isp.js"></script>
+    <!-- 2. Moteur du quiz -->
     <script src="script.js"></script>
 </body>
 </html>

@@ -7,6 +7,7 @@ let timerInterval = null;
 let timeLeft = 60;
 let settingsLevel = 'all';
 let showRationaleSetting = true;
+let currentSpecialty = 'pse'; // 'pse', 'chef-agres', 'isp'
 
 // --- INITIALISATION ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -58,20 +59,48 @@ function showScreen(screenId) {
     }
 }
 
+// --- LANCEMENT AVEC SPÉCIALITÉ ---
+function startQuizWithSpecialty(mode) {
+    const specialtySelect = document.getElementById('setting-specialty');
+    if (specialtySelect) {
+        currentSpecialty = specialtySelect.value;
+    }
+    selectMode(mode);
+}
+
 // --- LANCEMENT D'UN MODE DE JEU ---
 function selectMode(mode) {
     currentGameMode = mode;
     score = 0;
     currentQuestionIndex = 0;
 
-    // Filtrer les questions selon le niveau choisi (PSE1 / PSE2 / Tous)
-    let filteredQuestions = masterQuestionBank;
-    if (settingsLevel === 'PSE1') {
-        filteredQuestions = masterQuestionBank.filter(q => q.tags && q.tags.includes('PSE1'));
-        if (filteredQuestions.length === 0) filteredQuestions = masterQuestionBank; // Sécurité si pas de tag
-    } else if (settingsLevel === 'PSE2') {
-        filteredQuestions = masterQuestionBank.filter(q => q.tags && q.tags.includes('PSE2'));
-        if (filteredQuestions.length === 0) filteredQuestions = masterQuestionBank;
+    // Détermination stricte de la banque de questions (sans mélange de spécialités)
+    let selectedBank = [];
+    if (currentSpecialty === 'pse') {
+        selectedBank = (typeof masterQuestionBank !== 'undefined') ? masterQuestionBank : [];
+    } else if (currentSpecialty === 'chef-agres') {
+        selectedBank = (typeof masterChefAgresBank !== 'undefined') ? masterChefAgresBank : [];
+    } else if (currentSpecialty === 'isp') {
+        selectedBank = (typeof masterIspBank !== 'undefined') ? masterIspBank : [];
+    }
+
+    // Filtrer les questions selon le niveau choisi (uniquement pertinent pour le PSE)
+    let filteredQuestions = selectedBank;
+    if (currentSpecialty === 'pse') {
+        if (settingsLevel === 'PSE1') {
+            filteredQuestions = selectedBank.filter(q => q.tags && q.tags.includes('PSE1'));
+            if (filteredQuestions.length === 0) filteredQuestions = selectedBank;
+        } else if (settingsLevel === 'PSE2') {
+            filteredQuestions = selectedBank.filter(q => q.tags && q.tags.includes('PSE2'));
+            if (filteredQuestions.length === 0) filteredQuestions = selectedBank;
+        }
+    }
+
+    // Sécurité si aucune question n'est disponible
+    if (filteredQuestions.length === 0) {
+        alert("Aucune question n'est disponible pour cette spécialité.");
+        showScreen('welcome-screen');
+        return;
     }
 
     // Mélanger les questions de manière aléatoire
@@ -94,6 +123,13 @@ function selectMode(mode) {
     loadQuestion();
 }
 
+// --- OBTENIR LA BANQUE ACTIVE POUR LE REMÉLANGE ---
+function getActiveBank() {
+    if (currentSpecialty === 'chef-agres') return (typeof masterChefAgresBank !== 'undefined') ? masterChefAgresBank : [];
+    if (currentSpecialty === 'isp') return (typeof masterIspBank !== 'undefined') ? masterIspBank : [];
+    return (typeof masterQuestionBank !== 'undefined') ? masterQuestionBank : [];
+}
+
 // --- CHARGEMENT D'UNE QUESTION ---
 function loadQuestion() {
     if (currentGameMode === 'classic' && currentQuestionIndex >= activeQuestions.length) {
@@ -101,16 +137,16 @@ function loadQuestion() {
         return;
     }
     
-    // Si en mode chrono et qu'on a épuisé la banque, on remélange
-    if (currentGameMode === 'chrono' && currentQuestionIndex >= activeQuestions.length) {
-        activeQuestions = [...masterQuestionBank].sort(() => Math.random() - 0.5);
-        currentQuestionIndex = 0;
-    }
-
-    // Si en mode mort subite et qu'on épuise la banque, on remélange
-    if (currentGameMode === 'sudden-death' && currentQuestionIndex >= activeQuestions.length) {
-        activeQuestions = [...masterQuestionBank].sort(() => Math.random() - 0.5);
-        currentQuestionIndex = 0;
+    // Si en mode chrono ou mort subite et qu'on a épuisé la banque, on remélange avec la bonne banque
+    const currentBank = getActiveBank();
+    if ((currentGameMode === 'chrono' || currentGameMode === 'sudden-death') && currentQuestionIndex >= activeQuestions.length) {
+        if (currentBank.length > 0) {
+            activeQuestions = [...currentBank].sort(() => Math.random() - 0.5);
+            currentQuestionIndex = 0;
+        } else {
+            endGame();
+            return;
+        }
     }
 
     const q = activeQuestions[currentQuestionIndex];
@@ -141,7 +177,7 @@ function loadQuestion() {
     document.getElementById('rationale-container').classList.add('hidden');
     document.getElementById('next-btn').classList.add('hidden');
 
-    // Générer les boutons de réponses (mélangés pour plus de piment)
+    // Générer les boutons de réponses (mélangés)
     const optionsContainer = document.getElementById('options-container');
     optionsContainer.innerHTML = '';
 
@@ -158,7 +194,6 @@ function loadQuestion() {
 
 // --- SÉLECTION D'UNE RÉPONSE ---
 function selectAnswer(selectedOption, clickedButton, allOptions) {
-    // Désactiver tous les boutons de réponse pour éviter les clics multiples
     const optionButtons = document.querySelectorAll('.option-btn');
     optionButtons.forEach(b => b.disabled = true);
 
@@ -166,7 +201,6 @@ function selectAnswer(selectedOption, clickedButton, allOptions) {
 
     // Colorer les boutons
     optionButtons.forEach(b => {
-        // Retrouver l'option correspondante
         const optData = allOptions.find(o => o.text === b.textContent);
         if (optData.isCorrect) {
             b.classList.add('option-correct');
@@ -177,7 +211,7 @@ function selectAnswer(selectedOption, clickedButton, allOptions) {
         }
     });
 
-    // Gérer le score et les modes
+    // Gérer le score
     if (isCorrect) {
         score++;
         document.getElementById('current-score').textContent = score;
@@ -188,7 +222,6 @@ function selectAnswer(selectedOption, clickedButton, allOptions) {
         document.getElementById('rationale-text').textContent = selectedOption.rationale;
         document.getElementById('rationale-container').classList.remove('hidden');
     } else if (showRationaleSetting) {
-        // S'il n'y a pas de rationale spécifique dans l'option, chercher dans une autre
         const correctOpt = allOptions.find(o => o.isCorrect);
         if (correctOpt && correctOpt.rationale) {
             document.getElementById('rationale-text').textContent = correctOpt.rationale;
@@ -200,19 +233,16 @@ function selectAnswer(selectedOption, clickedButton, allOptions) {
     if (currentGameMode === 'sudden-death' && !isCorrect) {
         setTimeout(() => {
             endGame();
-        }, 1500); // Petite pause pour voir la bonne réponse avant de basculer
+        }, 1500);
         return;
     }
 
-    // Afficher le bouton suivant ou enchaîner
     if (currentGameMode === 'chrono') {
-        // En chrono, on passe automatiquement après 1,2 seconde pour aller vite
         setTimeout(() => {
             currentQuestionIndex++;
             loadQuestion();
         }, 1200);
     } else {
-        // En classique ou mort subite (si bonne réponse), on clique sur "Question suivante"
         document.getElementById('next-btn').classList.remove('hidden');
     }
 }
@@ -222,7 +252,7 @@ function nextQuestion() {
     loadQuestion();
 }
 
-// --- GESTION DU CHRONO (MODE CONTRE LA MONTRE) ---
+// --- GESTION DU CHRONO ---
 function startChronoTimer() {
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
@@ -261,7 +291,7 @@ function endGame() {
     }
 }
 
-// --- SYSTÈME DE HIGHSCORE / LEADERBOARD (MORT SUBITE) ---
+// --- SYSTÈME DE HIGHSCORE / LEADERBOARD ---
 function saveHighScore() {
     const pseudoInput = document.getElementById('player-pseudo');
     const pseudo = pseudoInput.value.trim() || "Secouriste Anonyme";
@@ -269,10 +299,7 @@ function saveHighScore() {
     let leaderboard = JSON.parse(localStorage.getItem('sdis36_leaderboard')) || [];
     leaderboard.push({ name: pseudo, score: score, date: new Date().toLocaleDateString() });
     
-    // Trier du plus grand au plus petit score
     leaderboard.sort((a, b) => b.score - a.score);
-    
-    // Garder uniquement le Top 10
     leaderboard = leaderboard.slice(0, 10);
 
     localStorage.setItem('sdis36_leaderboard', JSON.stringify(leaderboard));
@@ -318,7 +345,7 @@ function restartGame() {
     showScreen('welcome-screen');
 }
 
-// Utilitaire de sécurité pour les pseudos
+// Utilitaire de sécurité
 function escapeHtml(text) {
     const map = {
         '&': '&amp;',
@@ -328,7 +355,7 @@ function escapeHtml(text) {
         "'": '&#039;'
     };
     return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-} // <--- C'est cette accolade fermante qui manquait pour clore escapeHtml !
+}
 
 // Enregistrement du Service Worker pour la PWA
 if ('serviceWorker' in navigator) {
